@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Pão &amp; Afeto — padaria artesanal: pães fresquinhos, doces e salgados feitos com carinho. Encomendas para festas e eventos.">
+<title>Pão &amp; Afeto — Padaria Artesanal</title>
+<style>
+  /* ===== 1. DESIGN TOKENS (consistência e padrões) ===== */
+  :root{
+    --ink:#3a281e; --cream:#fff8ed; --bread:#c8783d; --red:#9b4330;
+    --red-dark:#6f2e21; --muted:#725d4d; --line:#eadccc; --surface:#fffdf8;
+    --focus:#1a5fb4; --ok:#2e6b3a;
+    --radius:9px; --space:24px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;color:var(--ink);background:var(--cream);
+    font-family:Georgia,'Times New Roman',serif;line-height:1.6;
+  }
+  h1,h2,h3,h4{line-height:1.15;margin:0}
+  p{margin:0}
+  /* Foco sempre visível (acessibilidade + affordance de teclado) */
+  :focus-visible{outline:3px solid var(--focus);outline-offset:3px;border-radius:6px}
+  /* Alvo de rolagem: compensa o cabeçalho fixo */
+  section[id],[id^="do"],[id^="sa"]{scroll-margin-top:96px}
+
+  /* ===== 2. SKIP LINK (affordance de acessibilidade) ===== */
+  .skip{
+    position:absolute;left:-9999px;top:0;z-index:200;
+    background:#fff;color:var(--red);padding:12px 18px;border-radius:0 0 8px 0;
+    font:700 .95rem Arial,sans-serif;text-decoration:none;
+  }
+  .skip:focus{left:0}
+
+  /* ===== 3. BARRA DE PROGRESSO (visibilidade do status do sistema) ===== */
+  .progresso{position:fixed;inset:0 0 auto 0;height:4px;z-index:120;pointer-events:none}
+  .progresso span{display:block;height:100%;width:0;background:var(--red);transition:width .1s linear}
+
+  /* ===== 4. CABEÇALHO ===== */
+  .site-header{
+    position:sticky;top:0;z-index:100;background:rgba(255,253,248,.97);
+    backdrop-filter:blur(6px);border-bottom:1px solid var(--line);
+  }
+  .top{
+    max-width:1120px;margin:auto;padding:12px 24px;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:10px;color:var(--red);text-decoration:none}
+  .brand:hover .brand-nome{text-decoration:underline;text-underline-offset:4px}
+  .brand-nome{font-size:1.2rem;font-weight:bold}
+  .brand-nome small{
+    display:block;font:700 .66rem Arial,sans-serif;letter-spacing:.15em;
+    text-transform:uppercase;color:var(--muted);
+  }
+  .brand svg{flex:0 0 auto}
+
+  /* Botão hambúrguer: só aparece no mobile (affordance clara) */
+  .menu-btn{
+    display:none;align-items:center;gap:8px;cursor:pointer;
+    background:#fff;color:var(--ink);border:2px solid var(--line);
+    border-radius:8px;padding:9px 14px;font:700 .9rem Arial,sans-serif;
+  }
+  .menu-btn:hover{border-color:var(--bread);color:var(--red)}
+
+  nav{display:flex;flex-wrap:wrap;align-items:center;gap:2px 4px}
+  nav a{
+    position:relative;color:var(--ink);text-decoration:none;
+    font:600 .95rem Arial,sans-serif;padding:9px 12px;border-radius:6px;
+    transition:background .15s,color .15s;
+  }
+  nav a:hover{background:#f3e6d5;color:var(--red);text-decoration:underline;text-underline-offset:4px}
+  /* Estado ATIVO: o usuário sabe sempre "onde está" */
+  nav a[aria-current="page"]{color:var(--red);background:#f7ecdd}
+  nav a[aria-current="page"]::after{
+    content:"";position:absolute;left:12px;right:12px;bottom:4px;height:2px;background:var(--red);
+  }
+
+  /* ===== 5. BOTÕES (affordance: parecem clicáveis) ===== */
+  .botao{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    background:var(--red);color:#fff8ed;border:0;border-radius:8px;
+    padding:13px 22px;cursor:pointer;text-decoration:none;
+    font:700 .95rem Arial,sans-serif;
+    box-shadow:0 2px 0 var(--red-dark),0 4px 12px rgba(58,40,30,.18);
+    transition:transform .12s,box-shadow .12s,background .12s;
+  }
+  .botao:hover{background:#853827;transform:translateY(-1px);
+    box-shadow:0 3px 0 var(--red-dark),0 8px 18px rgba(58,40,30,.24)}
+  .botao:active{transform:translateY(1px);box-shadow:0 1px 0 var(--red-dark)}
+  .botao--claro{background:#fff8ed;color:var(--red);box-shadow:0 2px 0 #d9c4a8,0 4px 12px rgba(0,0,0,.2)}
+  .botao--claro:hover{background:#fff}
+  .botao--vazado{background:transparent;color:var(--red);border:2px solid var(--red);box-shadow:none}
+  .botao--vazado:hover{background:var(--red);color:#fff8ed}
+  .botao--mini{padding:8px 14px;font-size:.82rem;box-shadow:0 2px 0 var(--red-dark)}
+  .botao[disabled]{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
+
+  /* ===== 6. HERO ===== */
+  .hero{
+    min-height:440px;display:grid;place-items:center;text-align:center;
+    padding:72px 24px;color:#fff;
+    background:
+      linear-gradient(90deg,rgba(43,27,17,.72),rgba(43,27,17,.25)),
+      linear-gradient(135deg,#8b4b2e,#d6a36c 55%,#f0d5aa);
+  }
+  .hero-inner{max-width:720px}
+  .eyebrow{text-transform:uppercase;letter-spacing:.16em;font:700 .78rem Arial,sans-serif}
+  .hero h1{margin:14px 0;font-size:clamp(2.4rem,7vw,4.5rem)}
+  .hero p{font-size:1.15rem;margin:0 auto 26px;max-width:600px}
+
+  /* ===== 7. CONTEÚDO ===== */
+  main{max-width:1120px;margin:auto;padding:56px 24px}
+  .intro{text-align:center;max-width:680px;margin:0 auto 40px}
+  h2{font-size:2rem;margin-bottom:10px}
+  .intro p,.card p{color:var(--muted)}
+  .secao{margin-bottom:52px}
+  .secao__cabecalho{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+  .secao__cabecalho .dica{font:600 .85rem Arial,sans-serif;color:var(--muted)}
+
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .cards--2{grid-template-columns:repeat(2,1fr)}
+
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:25px;transition:transform .15s,box-shadow .15s,border-color .15s;
+  }
+  .card:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(58,40,30,.12);border-color:var(--bread)}
+  .card h3{font-size:1.35rem;margin-bottom:6px}
+  .card .icone{font-size:1.8rem;display:block;margin-bottom:8px}
+
+  /* Produtos */
+  .produto{
+    display:flex;justify-content:space-between;align-items:center;gap:14px;
+    padding:14px 0;border-bottom:1px dashed var(--line);
+  }
+  .produto:last-child{border-bottom:0;padding-bottom:0}
+  .produto h4{font-size:1.05rem;margin-bottom:2px}
+  .produto p{color:var(--muted);font-size:.92rem}
+  .produto__acao{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto}
+  .preco{font:700 .95rem Arial,sans-serif;color:var(--red);white-space:nowrap}
+
+  .callout{
+    margin:44px 0;padding:30px;border-radius:var(--radius);
+    background:#f1e2cf;text-align:center;
+  }
+  .callout p{color:var(--muted);margin-bottom:18px}
+
+  /* ===== 8. FORMULÁRIOS (prevenção de erros) ===== */
+  .form{display:grid;gap:16px}
+  .form--grid{grid-template-columns:1fr 1fr}
+  .campo{display:flex;flex-direction:column;gap:6px}
+  .campo--full{grid-column:1/-1}
+  label{font:700 .9rem Arial,sans-serif}
+  .obrigatorio{color:var(--red)}
+  .ajuda{font:400 .8rem Arial,sans-serif;color:var(--muted)}
+  input,select,textarea{
+    font:400 1rem Arial,sans-serif;color:var(--ink);background:#fff;
+    border:2px solid var(--line);border-radius:8px;padding:11px 12px;width:100%;
+    transition:border-color .15s,box-shadow .15s;
+  }
+  input:hover,select:hover,textarea:hover{border-color:var(--bread)}
+  input:focus,select:focus,textarea:focus{outline:0;border-color:var(--red);box-shadow:0 0 0 3px rgba(155,67,48,.18)}
+  input[aria-invalid="true"],select[aria-invalid="true"],textarea[aria-invalid="true"]{
+    border-color:#b3261e;background:#fff6f5;
+  }
+  .erro{font:700 .8rem Arial,sans-serif;color:#b3261e;min-height:0}
+  .erro:empty{display:none}
+  fieldset{border:2px solid var(--line);border-radius:8px;padding:12px 14px;margin:0}
+  legend{font:700 .9rem Arial,sans-serif;padding:0 6px}
+  .radios{display:flex;gap:20px;flex-wrap:wrap}
+  .radios label{display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer}
+  .radios input{width:auto;accent-color:var(--red)}
+  .contador{font:600 .78rem Arial,sans-serif;color:var(--muted);text-align:right}
+
+  .mensagem{
+    border-radius:8px;padding:14px 16px;font:600 .92rem Arial,sans-serif;display:none;
+  }
+  .mensagem.sucesso{display:block;background:#e8f3ea;color:var(--ok);border:1px solid #b8d8bf}
+  .mensagem.falha{display:block;background:#fdeceb;color:#b3261e;border:1px solid #f2c3bf}
+
+  /* ===== 9. TOAST (visibilidade do status) ===== */
+  .toast{
+    position:fixed;left:50%;bottom:24px;z-index:150;max-width:90vw;
+    transform:translate(-50%,140%);opacity:0;pointer-events:none;
+    background:var(--ink);color:var(--cream);padding:13px 20px;border-radius:8px;
+    font:700 .9rem Arial,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.3);
+    transition:transform .3s,opacity .3s;
+  }
+  .toast.mostrar{transform:translate(-50%,0);opacity:1}
+
+  /* ===== 10. VOLTAR AO TOPO ===== */
+  .topo{
+    position:fixed;right:18px;bottom:18px;z-index:140;
+    width:50px;height:50px;border:0;border-radius:50%;cursor:pointer;
+    background:var(--red);color:#fff;font-size:1.2rem;
+    display:none;place-items:center;box-shadow:0 4px 14px rgba(0,0,0,.28);
+  }
+  .topo.mostrar{display:grid}
+  .topo:hover{background:var(--red-dark)}
+
+  /* ===== 11. RODAPÉ ===== */
+  footer{background:var(--ink);color:var(--cream);padding:34px 24px}
+  .foot{
+    max-width:1120px;margin:auto;display:flex;justify-content:space-between;
+    gap:20px;flex-wrap:wrap;font: .92rem Arial,sans-serif;align-items:center;
+  }
+  footer a{color:var(--cream)}
+  .foot-marca{display:flex;align-items:center;gap:10px}
+
+  /* ===== 12. RESPONSIVIDADE APLICADA ===== */
+  @media(max-width:860px){
+    .cards,.cards--2{grid-template-columns:1fr}
+    .form--grid{grid-template-columns:1fr}
+    .menu-btn{display:inline-flex}
+    nav{display:none;width:100%;flex-direction:column;align-items:stretch;gap:2px;padding-top:8px}
+    nav.aberto{display:flex}
+    nav a{padding:12px}
+    .hero{min-height:360px;padding:56px 20px}
+    main{padding:40px 20px}
+  }
+</style>
+</head>
+<body>
+
+<!-- Acessibilidade: pular direto para o conteúdo -->
+<a class="skip" href="#conteudo">Ir para o conteúdo principal</a>
+
+<!-- Status do sistema: barra de progresso de leitura -->
+<div class="progresso" aria-hidden="true"><span id="barraProgresso"></span></div>
+
+<!--  CABEÇALHO -->
+<header class="site-header">
+  <div class="top">
+    <a class="brand" href="#inicio" aria-label="Pão e Afeto — ir para o início">
+      <!-- SIGNO VISUAL: ícone (pão) + símbolo (coração) + índice (nome) -->
+      <svg width="42" height="42" viewBox="0 0 64 64" role="img" aria-label="Pão com coração: símbolo da padaria Pão e Afeto">
+        <!-- coração = SÍMBOLO de afeto -->
+        <path d="M32 26c-2.4-4.1-8-3.5-8 1.3 0 4 5.3 7.3 8 9.4 2.7-2.1 8-5.4 8-9.4 0-4.8-5.6-5.4-8-1.3z" fill="#9b4330"/>
+        <!-- pão = ÍCONE (semelhança com o objeto real) -->
+        <path d="M6 44c0-9 11-14 26-14s26 5 26 14c0 4-3 7-7 7H13c-4 0-7-3-7-7z" fill="#c8783d"/>
+        <path d="M22 34l-4 12M32 32l-4 14M42 34l-4 12" stroke="#fff8ed" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <span class="brand-nome">Pão &amp; Afeto<small>padaria artesanal</small></span>
+    </a>
+
+    <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="menu">
+      ☰ Menu
+    </button>
+
+    <nav id="menu" aria-label="Menu principal">
+      <a href="#inicio" aria-current="page">Início</a>
+      <a href="#doces">Doces</a>
+      <a href="#salgados">Salgados</a>
+      <a href="#encomendas">Encomendas</a>
+      <a href="#contato">Contato</a>
+      <a href="#trabalhe">Trabalhe Conosco</a>
+      <a href="#conta">Conta</a>
+    </nav>
+  </div>
+</header>
+
+<!-- HERO  -->
+<section class="hero" id="inicio">
+  <div class="hero-inner">
+    <div class="eyebrow">Feito com carinho, todos os dias</div>
+    <h1>Um pedacinho de casa em cada mordida.</h1>
+    <p>Pães quentinhos, receitas de família e aquele cheirinho bom que dá vontade de ficar.</p>
+    <a class="botao botao--claro" href="#cardapio">🍞 Conheça nosso cardápio</a>
+  </div>
+</section>
+
+<!-- CONTEÚDO  -->
+<main id="conteudo">
+
+  <div class="intro">
+    <h2>Bem-vindo à nossa padaria</h2>
+    <p>Na Pão &amp; Afeto, cada fornada é preparada com ingredientes selecionados e muito cuidado. Escolha algo gostoso e aproveite!</p>
+  </div>
+
+  <!-- CARDÁPIO -->
+  <section class="secao" id="cardapio" aria-labelledby="tituloCardapio">
+    <div class="secao__cabecalho">
+      <h2 id="tituloCardapio">Nosso cardápio</h2>
+      <span class="dica">Clique em “Pedir” e o item já vai preenchido para o formulário de encomenda.</span>
+    </div>
+
+    <div class="cards cards--2">
+
+      <!-- DOCES -->
+      <article class="card" id="doces" aria-labelledby="tituloDoces">
+        <span class="icone" aria-hidden="true">🍰</span>
+        <h3 id="tituloDoces">Doces</h3>
+        <p style="margin-bottom:10px">Bolos, tortas e sonhos para adoçar o seu dia.</p>
+
+        <div class="produto">
+          <div>
+            <h4>Bolo de cenoura</h4>
+            <p>Cenoura, chocolate meio amargo e receita da vovó.</p>
+          </div>
+          <div class="produto__acao">
+            <span class="preco">R$ 28,00</span>
+            <button class="botao botao--mini" type="button" data-item="Bolo de cenoura">Pedir</button>
+          </div>
+        </div>
+
+        <div class="produto">
+          <div>
+            <h4>Sonho de creme</h4>
+            <p>Massa fofa, recheio de creme de baunilha.</p>
+          </div>
+          <div class="produto__acao">
+            <span class="preco">R$ 7,50</span>
+            <button class="botao botao--mini" type="button" data-item="Sonho de creme">Pedir</button>
+          </div>
+        </div>
+
+        <div class="produto">
+          <div>
+            <h4>Torta de morango</h4>
+            <p>Base crocante, creme leve e morangos frescos.</p>
+          </div>
+          <div class="produto__acao">
+            <span class="preco">R$ 65,00</span>
+            <button class="botao botao--mini" type="button" data-item="Torta de morango">Pedir</button>
+          </div>
+        </div>
+      </article>
+
+      <!-- SALGADOS -->
+      <article class="card" id="salgados" aria-labelledby="tituloSalgados">
+        <span class="icone" aria-hidden="true">🥐</span>
+        <h3 id="tituloSalgados">Salgados</h3>
+        <p style="margin-bottom:10px">Pães, empadas e salgados assados, sempre fresquinhos.</p>
+
+        <div class="produto">
+          <div>
+            <h4>Pão francês quentinho</h4>
+            <p>Assado de hora em hora. Vendido por unidade.</p>
+          </div>
+          <div class="produto__acao">
+            <span class="preco">R$ 1,20</span>
+            <button class="botao botao--mini" type="button" data-item="Pão francês quentinho">Pedir</button>
+          </div>
+        </div>
+
+        <div class="produto">
+          <div>
+            <h4>Coxinha de frango</h4>
+            <p>Frango desfiado, massa leve e casquinha crocante.</p>
+          </div>
+          <div class="produto__acao">
+            <span class="preco">R$ 8,00</span>
+            <button class="botao botao--mini" type="button" data-item="Coxinha de frango">Pedir</button>
+          </div>
+        </div>
+
+        <div class="produto">
+          <div>
+            <h4>Empada de palmito</h4>
+            <p>Massa quebradiça e recheio cremoso de palmito.</p>
+          </div>
+          <div class="produto__acao">
+            <span class="preco">R$ 9,00</span>
+            <button class="botao botao--mini" type="button" data-item="Empada de palmito">Pedir</button>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- CALLOUT -->
+  <section class="callout" aria-labelledby="tituloFesta">
+    <h2 id="tituloFesta">Tem festa chegando?</h2>
+    <p>Deixe os quitutes com a gente e aproveite cada momento.</p>
+    <a class="botao" href="#encomendas">🎂 Fazer uma encomenda</a>
+  </section>
+
+  <!-- ENCOMENDAS -->
+  <section class="secao" id="encomendas" aria-labelledby="tituloEncomendas">
+    <div class="secao__cabecalho">
+      <h2 id="tituloEncomendas">Encomendas</h2>
+      <span class="dica">Campos com <span class="obrigatorio">*</span> são obrigatórios.</span>
+    </div>
+
+    <div class="card">
+      <!-- Aviso de status permanente (aria-live) -->
+      <div class="mensagem" id="statusEncomenda" role="status" aria-live="polite"></div>
+
+      <form class="form" id="formEncomenda" novalidate>
+        <div class="form--grid" style="display:grid;gap:16px">
+
+          <div class="campo">
+            <label for="nome">Seu nome <span class="obrigatorio">*</span></label>
+            <input type="text" id="nome" name="nome" autocomplete="name"
+                   placeholder="Ex.: Maria Silva" required minlength="3"
+                   aria-describedby="ajudaNome erroNome">
+            <span class="ajuda" id="ajudaNome">Como podemos chamar você?</span>
+            <span class="erro" id="erroNome" role="alert"></span>
+          </div>
+
+          <div class="campo">
+            <label for="telefone">Telefone / WhatsApp <span class="obrigatorio">*</span></label>
+            <input type="tel" id="telefone" name="telefone" autocomplete="tel"
+                   placeholder="(11) 91234-5678" required
+                   aria-describedby="ajudaTel erroTel">
+            <span class="ajuda" id="ajudaTel">Somente números com DDD.</span>
+            <span class="erro" id="erroTel" role="alert"></span>
+          </div>
+
+          <div class="campo">
+            <label for="item">O que você quer encomendar? <span class="obrigatorio">*</span></label>
+            <select id="item" name="item" required aria-describedby="erroItem">
+              <option value="">Selecione um item…</option>
+              <option>Bolo de cenoura</option>
+              <option>Sonho de creme</option>
+              <option>Torta de morango</option>
+              <option>Pão francês quentinho</option>
+              <option>Coxinha de frango</option>
+              <option>Empada de palmito</option>
+              <option>Outro (descrever nas observações)</option>
+            </select>
+            <span class="erro" id="erroItem" role="alert"></span>
+          </div>
+
+          <div class="campo">
+            <label for="quantidade">Quantidade <span class="obrigatorio">*</span></label>
+            <input type="number" id="quantidade" name="quantidade" min="1" max="50" step="1" value="1"
+                   required aria-describedby="ajudaQtd erroQtd">
+            <span class="ajuda" id="ajudaQtd">Mínimo 1 e máximo 50 unidades por pedido.</span>
+            <span class="erro" id="erroQtd" role="alert"></span>
+          </div>
+
+          <div class="campo">
+            <label for="data">Data de retirada/entrega <span class="obrigatorio">*</span></label>
+            <input type="date" id="data" name="data" required aria-describedby="ajudaData erroData">
+            <span class="ajuda" id="ajudaData">Não aceitamos datas passadas. Encomendas com 48h de antecedência.</span>
+            <span class="erro" id="erroData" role="alert"></span>
+          </div>
+
+          <div class="campo">
+            <fieldset>
+              <legend>Como prefere receber? <span class="obrigatorio">*</span></legend>
+              <div class="radios">
+                <label><input type="radio" name="modalidade" value="Retirada na loja" checked> Retirada na loja</label>
+                <label><input type="radio" name="modalidade" value="Entrega em casa"> Entrega em casa</label>
+              </div>
+            </fieldset>
+            <span class="erro" id="erroModalidade" role="alert"></span>
+          </div>
+
+          <div class="campo campo--full">
+            <label for="observacoes">Observações (opcional)</label>
+            <textarea id="observacoes" name="observacoes" rows="3" maxlength="200"
+                      placeholder="Ex.: sem açúcar, escrever “Parabéns” no bolo…"
+                      aria-describedby="contadorObs"></textarea>
+            <span class="contador" id="contadorObs">0/200 caracteres</span>
+          </div>
+
+          <div class="campo campo--full">
+            <button class="botao" type="submit" id="btnEnviar">Enviar encomenda</button>
+            <span class="ajuda">Ao enviar, você verá a confirmação com o número do protocolo.</span>
+          </div>
+
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- CONTATO / TRABALHE / CONTA -->
+  <section class="secao" aria-label="Mais informações">
+    <div class="cards">
+
+      <article class="card" id="contato" aria-labelledby="tituloContato">
+        <span class="icone" aria-hidden="true">💬</span>
+        <h3 id="tituloContato">Contato</h3>
+        <p>Fale com nossa equipe para tirar dúvidas ou fazer seu pedido.</p>
+        <p style="margin-top:12px">
+          📍 Rua das Flores, 123 — Cotia/SP<br>
+          📞 <a href="tel:+551140028922">(11) 4002-8922</a><br>
+          ✉️ <a href="mailto:contato@paoafeto.com.br">contato@paoafeto.com.br</a><br>
+          🕒 Seg. a sáb., das 6h às 19h
+        </p>
+        <p style="margin-top:14px">
+          <a class="botao botao--vazado botao--mini"
+             href="https://wa.me/5511940028922" target="_blank" rel="noopener">
+             Falar no WhatsApp
+          </a>
+        </p>
+      </article>
+
+      <article class="card" id="trabalhe" aria-labelledby="tituloTrabalhe">
+        <span class="icone" aria-hidden="true">🤝</span>
+        <h3 id="tituloTrabalhe">Trabalhe Conosco</h3>
+        <p>Gosta de gente, de cozinha e de pão quentinho? Queremos conhecer você.</p>
+        <p style="margin-top:12px">Envie seu currículo para
+          <a href="mailto:vagas@paoafeto.com.br?subject=Curr%C3%ADculo%20-%20Trabalhe%20Conosco">
+            vagas@paoafeto.com.br</a>.
+        </p>
+        <p style="margin-top:14px">
+          <a class="botao botao--vazado botao--mini"
+             href="mailto:vagas@paoafeto.com.br?subject=Curr%C3%ADculo%20-%20Trabalhe%20Conosco">
+             Enviar currículo
+          </a>
+        </p>
+      </article>
+
+      <article class="card" id="conta" aria-labelledby="tituloConta">
+        <span class="icone" aria-hidden="true">👤</span>
+        <h3 id="tituloConta">Conta</h3>
+        <p>Acesse para acompanhar pedidos e guardar seus favoritos.</p>
+
+        <div class="mensagem" id="statusConta" role="status" aria-live="polite"></div>
+
+        <form class="form" id="formConta" novalidate style="margin-top:14px">
+          <div class="campo">
+            <label for="emailConta">E-mail <span class="obrigatorio">*</span></label>
+            <input type="email" id="emailConta" name="email" autocomplete="email"
+                   placeholder="voce@exemplo.com" required aria-describedby="erroEmail">
+            <span class="erro" id="erroEmail" role="alert"></span>
+          </div>
+          <div class="campo">
+            <label for="senhaConta">Senha <span class="obrigatorio">*</span></label>
+            <input type="password" id="senhaConta" name="senha" autocomplete="current-password"
+                   minlength="6" required aria-describedby="ajudaSenha erroSenha">
+            <span class="ajuda" id="ajudaSenha">Mínimo de 6 caracteres.</span>
+            <span class="erro" id="erroSenha" role="alert"></span>
+          </div>
+          <button class="botao" type="submit">Entrar</button>
+        </form>
+      </article>
+
+    </div>
+  </section>
+
+</main>
+
+<!--  RODAPÉ  -->
+<footer>
+  <div class="foot">
+    <span class="foot-marca">
+      <svg width="30" height="30" viewBox="0 0 64 64" aria-hidden="true">
+        <path d="M32 26c-2.4-4.1-8-3.5-8 1.3 0 4 5.3 7.3 8 9.4 2.7-2.1 8-5.4 8-9.4 0-4.8-5.6-5.4-8-1.3z" fill="#f0d5aa"/>
+        <path d="M6 44c0-9 11-14 26-14s26 5 26 14c0 4-3 7-7 7H13c-4 0-7-3-7-7z" fill="#c8783d"/>
+        <path d="M22 34l-4 12M32 32l-4 14M42 34l-4 12" stroke="#3a281e" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      © 2026 Pão &amp; Afeto — Padaria artesanal
+    </span>
+    <span>Feito com carinho, servido quentinho.</span>
+  </div>
+</footer>
+
+<!-- Status flutuante -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- Volta ao topo -->
+<button class="topo" id="btnTopo" type="button" aria-label="Voltar ao topo da página">↑</button>
+
+<script>
+(function () {
+  'use strict';
+
+  /* 
+     1) VISIBILIDADE DO STATUS — barra de progresso + menu ativo
+      */
+  const barra   = document.getElementById('barraProgresso');
+  const btnTopo = document.getElementById('btnTopo');
+  const navLinks = Array.from(document.querySelectorAll('nav a[href^="#"]'));
+  const alvos = navLinks
+    .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+    .filter(Boolean);
+
+  function aoRolar() {
+    // barra de progresso
+    const doc = document.documentElement;
+    const max = doc.scrollHeight - doc.clientHeight;
+    barra.style.width = (max > 0 ? (doc.scrollTop / max) * 100 : 0) + '%';
+
+    // botão voltar ao topo
+    btnTopo.classList.toggle('mostrar', window.scrollY > 400);
+
+    // marca o item de menu correspondente à seção visível
+    const y = window.scrollY + 130;
+    let atual = alvos[0];
+    alvos.forEach(sec => {
+      if (sec.getBoundingClientRect().top + window.scrollY <= y) atual = sec;
+    });
+    navLinks.forEach(a => {
+      const ativo = a.getAttribute('href') === '#' + atual.id;
+      if (ativo) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+  }
+  window.addEventListener('scroll', aoRolar, { passive: true });
+  window.addEventListener('resize', aoRolar);
+  aoRolar();
+
+  btnTopo.addEventListener('click', () =>
+    window.scrollTo({ top: 0, behavior: 'smooth' }));
+
+  /* 
+     2) MENU RESPONSIVO
+      */
+  const menuBtn = document.getElementById('menuBtn');
+  const menu    = document.getElementById('menu');
+  menuBtn.addEventListener('click', () => {
+    const aberto = menu.classList.toggle('aberto');
+    menuBtn.setAttribute('aria-expanded', String(aberto));
+    menuBtn.textContent = aberto ? '✕ Fechar' : '☰ Menu';
+  });
+  menu.addEventListener('click', e => {
+    if (e.target.tagName === 'A' && menu.classList.contains('aberto')) {
+      menu.classList.remove('aberto');
+      menuBtn.setAttribute('aria-expanded', 'false');
+      menuBtn.textContent = '☰ Menu';
+    }
+  });
+
+  /* 
+     3) TOAST — feedback imediato de qualquer ação
+      */
+  const toast = document.getElementById('toast');
+  let toastTimer;
+  function avisar(texto) {
+    toast.textContent = texto;
+    toast.classList.add('mostrar');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('mostrar'), 3200);
+  }
+
+  /* 
+     4) AFFORDANCE — botão "Pedir" leva o item ao formulário
+     */
+  const selectItem = document.getElementById('item');
+  document.querySelectorAll('[data-item]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const valor = btn.getAttribute('data-item');
+      selectItem.value = valor;
+      selectItem.removeAttribute('aria-invalid');
+      document.getElementById('erroItem').textContent = '';
+      document.getElementById('encomendas').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setTimeout(() => document.getElementById('nome').focus({ preventScroll: true }), 600);
+      avisar('✔ "' + valor + '" adicionado à sua encomenda.');
+    });
+  });
+
+  /* 
+     5) PREVENÇÃO DE ERROS — máscara, limites e data mínima
+      */
+  const campoData = document.getElementById('data');
+  const hoje = new Date();
+  const isoHoje = new Date(hoje.getTime() - hoje.getTimezoneOffset() * 60000)
+                    .toISOString().slice(0, 10);
+  campoData.min = isoHoje;                       // impede escolher data passada
+
+  const campoTel = document.getElementById('telefone');
+  campoTel.addEventListener('input', e => {
+    let v = e.target.value.replace(/\D/g, '').slice(0, 11);
+    if (v.length > 6)      v = `(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`;
+    else if (v.length > 2) v = `(${v.slice(0,2)}) ${v.slice(2)}`;
+    else if (v.length > 0) v = `(${v}`;
+    e.target.value = v;
+  });
+
+  const obs = document.getElementById('observacoes');
+  const contador = document.getElementById('contadorObs');
+  obs.addEventListener('input', () => {
+    contador.textContent = obs.value.length + '/200 caracteres';
+  });
+
+  /* Funções auxiliares de validação */
+  function marcarErro(campo, idErro, msg) {
+    const span = document.getElementById(idErro);
+    if (msg) {
+      campo.setAttribute('aria-invalid', 'true');
+      span.textContent = msg;
+      return false;
+    }
+    campo.removeAttribute('aria-invalid');
+    span.textContent = '';
+    return true;
+  }
+
+  /* =========================================================
+     6) FORMULÁRIO DE ENCOMENDA — validação + status de envio
+     ========================================================= */
+  const formEnc   = document.getElementById('formEncomenda');
+  const statusEnc = document.getElementById('statusEncomenda');
+  const btnEnviar = document.getElementById('btnEnviar');
+
+  formEnc.addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const nome  = document.getElementById('nome');
+    const tel   = campoTel;
+    const item  = selectItem;
+    const qtd   = document.getElementById('quantidade');
+    const data  = campoData;
+
+    let ok = true;
+    let primeiroErro = null;
+
+    if (nome.value.trim().length < 3) {
+      ok = marcarErro(nome, 'erroNome', 'Informe seu nome completo (mínimo 3 letras).') && ok;
+      primeiroErro = primeiroErro || nome;
+    } else marcarErro(nome, 'erroNome', '');
+
+    const digitos = tel.value.replace(/\D/g, '');
+    if (digitos.length < 10 || digitos.length > 11) {
+      ok = marcarErro(tel, 'erroTel', 'Digite o telefone com DDD, ex.: (11) 91234-5678.') && ok;
+      primeiroErro = primeiroErro || tel;
+    } else marcarErro(tel, 'erroTel', '');
+
+    if (!item.value) {
+      ok = marcarErro(item, 'erroItem', 'Escolha o item que deseja encomendar.') && ok;
+      primeiroErro = primeiroErro || item;
+    } else marcarErro(item, 'erroItem', '');
+
+    const n = Number(qtd.value);
+    if (!qtd.value || isNaN(n) || n < 1 || n > 50) {
+      ok = marcarErro(qtd, 'erroQtd', 'A quantidade deve ser entre 1 e 50 unidades.') && ok;
+      primeiroErro = primeiroErro || qtd;
+    } else marcarErro(qtd, 'erroQtd', '');
+
+    if (!data.value) {
+      ok = marcarErro(data, 'erroData', 'Escolha a data de retirada ou entrega.') && ok;
+      primeiroErro = primeiroErro || data;
+    } else if (data.value < isoHoje) {
+      ok = marcarErro(data, 'erroData', 'A data não pode ser anterior a hoje.') && ok;
+      primeiroErro = primeiroErro || data;
+    } else marcarErro(data, 'erroData', '');
+
+    if (!ok) {
+      statusEnc.className = 'mensagem falha';
+      statusEnc.textContent = '⚠ Encontramos ' +
+        document.querySelectorAll('#formEncomenda [aria-invalid="true"]').length +
+        ' campo(s) para corrigir. Verifique as mensagens em vermelho.';
+      if (primeiroErro) primeiroErro.focus();
+      return;
+    }
+
+    /* Status de envio: botão desabilitado + texto de progresso */
+    statusEnc.className = 'mensagem';
+    statusEnc.textContent = '';
+    btnEnviar.disabled = true;
+    btnEnviar.textContent = '⏳ Enviando…';
+
+    setTimeout(() => {
+      const protocolo = 'PA-' + new Date().getFullYear() + '-' +
+                        String(Math.floor(Math.random() * 9000) + 1000);
+
+      const modalidade = document.querySelector('input[name="modalidade"]:checked').value;
+      const dataBR = data.value.split('-').reverse().join('/');
+
+      statusEnc.className = 'mensagem sucesso';
+      statusEnc.textContent =
+        '✔ Encomenda recebida! Protocolo ' + protocolo + ' — ' + n + '× ' + item.value +
+        ' para ' + dataBR + ' (' + modalidade + '). Entraremos em contato pelo telefone ' +
+        tel.value + '.';
+
+      avisar('✔ Encomenda enviada! Protocolo ' + protocolo);
+      btnEnviar.disabled = false;
+      btnEnviar.textContent = 'Enviar encomenda';
+      formEnc.reset();
+      obs.dispatchEvent(new Event('input'));
+      statusEnc.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 1200);
+  });
+
+  /* =========================================================
+     7) FORMULÁRIO DE CONTA
+     ========================================================= */
+  const formConta  = document.getElementById('formConta');
+  const statusConta = document.getElementById('statusConta');
+
+  formConta.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const email = document.getElementById('emailConta');
+    const senha = document.getElementById('senhaConta');
+    let ok = true;
+
+    const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.value.trim());
+    if (!emailValido) {
+      ok = marcarErro(email, 'erroEmail', 'Digite um e-mail válido, ex.: voce@exemplo.com.') && ok;
+    } else marcarErro(email, 'erroEmail', '');
+
+    if (senha.value.length < 6) {
+      ok = marcarErro(senha, 'erroSenha', 'A senha deve ter no mínimo 6 caracteres.') && ok;
+    } else marcarErro(senha, 'erroSenha', '');
+
+    if (!ok) {
+      statusConta.className = 'mensagem falha';
+      statusConta.textContent = '⚠ Corrija os campos destacados para entrar.';
+      return;
+    }
+
+    statusConta.className = 'mensagem sucesso';
+    statusConta.textContent = '✔ Login realizado (demonstração). Bem-vindo(a) de volta!';
+    avisar('✔ Login realizado com sucesso.');
+    formConta.reset();
+  });
+
+})();
+</script>
+</body>
+</html>
